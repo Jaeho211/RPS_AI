@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Enum
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Enum, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 import datetime
@@ -14,45 +14,58 @@ class Choice(enum.Enum):
 class Player(Base):
     __tablename__ = "players"
     
-    id = Column(Integer, primary_key=True)
-    name = Column(String, unique=True, nullable=False)
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, index=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     
     # Relationships
-    game_participations = relationship("GameParticipation", back_populates="player")
-    choices = relationship("PlayerChoice", back_populates="player")
+    game_results = relationship("GameResult", back_populates="player")
 
 class Game(Base):
     __tablename__ = "games"
     
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, index=True)
+    created_at = Column(DateTime, default=datetime.datetime.now)
+    player_choices = relationship("PlayerChoice", back_populates="game", cascade="all, delete-orphan")
+    
+    # Relationships
+    results = relationship("GameResult", back_populates="game")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "created_at": self.created_at,
+            "players": [
+                {
+                    "name": pc.player_name,
+                    "choice": pc.choice,
+                    "is_winner": pc.is_winner
+                }
+                for pc in self.player_choices
+            ]
+        }
+
+class GameResult(Base):
+    __tablename__ = "game_results"
+
+    id = Column(Integer, primary_key=True, index=True)
+    game_id = Column(Integer, ForeignKey("games.id"))
+    player_id = Column(Integer, ForeignKey("players.id"))
+    choice = Column(String)  # 'rock', 'paper', 'scissors'
+    is_winner = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     
     # Relationships
-    participations = relationship("GameParticipation", back_populates="game")
-    choices = relationship("PlayerChoice", back_populates="game")
-
-class GameParticipation(Base):
-    __tablename__ = "game_participations"
-    
-    id = Column(Integer, primary_key=True)
-    game_id = Column(Integer, ForeignKey("games.id"))
-    player_id = Column(Integer, ForeignKey("players.id"))
-    is_winner = Column(Integer, default=0)  # 0: 패배, 1: 승리
-    
-    # Relationships
-    game = relationship("Game", back_populates="participations")
-    player = relationship("Player", back_populates="game_participations")
+    game = relationship("Game", back_populates="results")
+    player = relationship("Player", back_populates="game_results")
 
 class PlayerChoice(Base):
     __tablename__ = "player_choices"
-    
-    id = Column(Integer, primary_key=True)
+
+    id = Column(Integer, primary_key=True, index=True)
     game_id = Column(Integer, ForeignKey("games.id"))
-    player_id = Column(Integer, ForeignKey("players.id"))
-    choice = Column(Enum(Choice), nullable=False)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    player_name = Column(String)
+    choice = Column(String)  # 'rock', 'paper', 'scissors'
+    is_winner = Column(Boolean, default=False)
     
-    # Relationships
-    game = relationship("Game", back_populates="choices")
-    player = relationship("Player", back_populates="choices") 
+    game = relationship("Game", back_populates="player_choices") 
