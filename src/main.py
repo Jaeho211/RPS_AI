@@ -6,6 +6,8 @@ from fastapi.requests import Request
 from sqlalchemy.orm import Session
 from typing import List, Optional
 import uvicorn
+import random
+from pydantic import BaseModel
 
 from database.database import get_db, engine
 from database.models import Base, Player, Game, GameParticipation, PlayerChoice, Choice
@@ -18,8 +20,15 @@ app = FastAPI()
 predictor = RPSPredictor()
 
 # 정적 파일과 템플릿 설정
-app.mount("/static", StaticFiles(directory="src/static"), name="static")
-templates = Jinja2Templates(directory="src/templates")
+app.mount("/static", StaticFiles(directory="static"), name="static")
+templates = Jinja2Templates(directory="templates")
+
+class StartGameRequest(BaseModel):
+    player_name: str
+
+class PlayGameRequest(BaseModel):
+    player_id: int
+    choice: str
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
@@ -96,6 +105,133 @@ def predict_next_choice(player_id: int):
         "prediction": prediction,
         "stats": stats
     }
+
+@app.post("/start_game")
+def start_game(request: StartGameRequest, db: Session = Depends(get_db)):
+    # 플레이어 생성 또는 기존 플레이어 찾기
+    player = db.query(Player).filter(Player.name == request.player_name).first()
+    if not player:
+        player = Player(name=request.player_name)
+        db.add(player)
+        db.commit()
+        db.refresh(player)
+    
+    # 플레이어의 게임 통계 계산
+    wins = db.query(GameParticipation).filter(
+        GameParticipation.player_id == player.id,
+        GameParticipation.is_winner == 1
+    ).count()
+    
+    total_games = db.query(GameParticipation).filter(
+        GameParticipation.player_id == player.id
+    ).count()
+    
+    # AI 예측 가져오기
+    prediction = predictor.predict_next_choice(player.id)
+    prediction_probability = 0.33  # 초기 예측은 랜덤 확률
+
+    return {
+        "player_id": player.id,
+        "player_name": player.name,
+        "wins": wins,
+        "losses": total_games - wins,
+        "draws": 0,  # 나중에 구현
+        "prediction": prediction,
+        "prediction_probability": prediction_probability
+    }
+
+@app.post("/play")
+def play_game(request: PlayGameRequest, db: Session = Depends(get_db)):
+    # AI의 선택 (랜덤)
+    ai_choice = random.choice(['rock', 'paper', 'scissors'])
+    
+    # 게임 생성
+    game = Game()
+    db.add(game)
+    db.commit()
+    
+    # 플레이어의 선택 저장
+    player_choice = PlayerChoice(
+        game_id=game.id,
+        player_id=request.player_id,
+        choice=Choice(request.choice)
+    )
+    db.add(player_choice)
+    
+    # AI의 선택 저장
+    ai_player = db.query(Player).filter(Player.name == 'AI').first()
+    if not ai_player:
+        ai_player = Player(name='AI')
+        db.add(ai_player)
+        db.commit()
+    
+    ai_player_choice = PlayerChoice(
+        game_id=game.id,
+        player_id=ai_player.id,
+        choice=Choice(ai_choice)
+    )
+    db.add(ai_player_choice)
+    
+    # 승자 결정
+    result = determine_winner(request.choice, ai_choice)
+    
+    # 참여 정보 저장
+    player_participation = GameParticipation(
+        game_id=game.id,
+        player_id=request.player_id,
+        is_winner=1 if result == "승리" else 0
+    )
+    db.add(player_participation)
+    
+    ai_participation = GameParticipation(
+        game_id=game.id,
+        player_id=ai_player.id,
+        is_winner=1 if result == "패배" else 0
+    )
+    db.add(ai_participation)
+    
+    # AI 모델 업데이트
+    predictor.update_model(request.player_id, [request.choice])
+    
+    # 플레이어의 게임 통계 계산
+    wins = db.query(GameParticipation).filter(
+        GameParticipation.player_id == request.player_id,
+        GameParticipation.is_winner == 1
+    ).count()
+    
+    total_games = db.query(GameParticipation).filter(
+        GameParticipation.player_id == request.player_id
+    ).count()
+    
+    # 다음 선택 예측
+    next_prediction = predictor.predict_next_choice(request.player_id)
+    prediction_probability = 0.33  # 초기 예측은 랜덤 확률
+    
+    db.commit()
+    
+    return {
+        "player_choice": request.choice,
+        "ai_choice": ai_choice,
+        "result": result,
+        "player_name": db.query(Player).get(request.player_id).name,
+        "wins": wins,
+        "losses": total_games - wins,
+        "draws": 0,  # 나중에 구현
+        "prediction": next_prediction,
+        "prediction_probability": prediction_probability
+    }
+
+def determine_winner(player_choice: str, ai_choice: str) -> str:
+    if player_choice == ai_choice:
+        return "무승부"
+    
+    winning_moves = {
+        'rock': 'scissors',
+        'paper': 'rock',
+        'scissors': 'paper'
+    }
+    
+    return "승리" if winning_moves[player_choice] == ai_choice else "패배"
 
 def determine_winners(choices_dict):
     """가위바위보 게임의 승자 결정"""
