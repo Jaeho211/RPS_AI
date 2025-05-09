@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: rps-ai
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: cd src && gunicorn main:app -w 4 -k uvicorn.workers.UvicornWorker -b 0.0.0.0:$PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.8.0
+
+databases:
+  - name: rps-db
+    databaseName: rpsdb
+    user: rps_user 
