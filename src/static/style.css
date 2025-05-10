@@ -113,7 +113,16 @@ h3 {
     background-color: #45a049;
 }
 
+/* 눌렀을 때 바로 선택 효과 표시 */
+.choice-btn:active:not(:disabled) {
+    background-color: var(--secondary-color);
+}
+
 .choice-btn.selected {
+    background-color: var(--secondary-color);
+}
+
+.choice-btn.selected:hover:not(:disabled) {
     background-color: var(--secondary-color);
 }
 

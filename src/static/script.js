@@ -1,6 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
     const playerSelection = document.getElementById('playerSelection');
-    const startGameBtn = document.getElementById('startGame');
     const gamePlay = document.getElementById('gamePlay');
     const choiceInputs = document.getElementById('choiceInputs');
     const submitChoicesBtn = document.getElementById('submitChoices');
@@ -18,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             playerSelection.innerHTML = players.map(player => `
                 <label class="player-checkbox">
-                    <input type="checkbox" value="${player.id}" data-name="${player.name}">
+                    <input type="checkbox" value="${player.id}" data-name="${player.name}" ${player.name === '이재호' ? 'checked' : ''}>
                     ${player.name}
                 </label>
             `).join('');
@@ -27,21 +26,24 @@ document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('.player-checkbox input').forEach(checkbox => {
                 checkbox.addEventListener('change', updateStartButton);
             });
+
+            // 초기 상태 반영
+            updateStartButton();
         } catch (error) {
             console.error('플레이어 목록 로드 실패:', error);
         }
     }
 
-    // 시작 버튼 상태 업데이트
+    // 선택 상태 변경 시 자동 렌더링
     function updateStartButton() {
         selectedPlayers.clear();
         document.querySelectorAll('.player-checkbox input:checked').forEach(checkbox => {
-            selectedPlayers.add({
-                id: checkbox.value,
-                name: checkbox.dataset.name
-            });
+            selectedPlayers.add({ id: checkbox.value, name: checkbox.dataset.name });
         });
-        startGameBtn.disabled = selectedPlayers.size < 2;
+        // 2명 이상일 때만 렌더
+        if (selectedPlayers.size >= 2) {
+            showChoiceInputs();
+        }
     }
 
     // 선택 입력 UI 생성
@@ -121,7 +123,12 @@ document.addEventListener('DOMContentLoaded', () => {
             // 선택 버튼 이벤트 리스너 추가
             const playerName = player.name;
             playerChoiceContainer.querySelectorAll('.choice-btn').forEach(btn => {
-                btn.addEventListener('click', () => handleChoice(playerName, btn));
+                // 터치, 마우스 즉시 반영: pointerdown 및 mousedown 사용
+                const listener = () => handleChoice(playerName, btn);
+                btn.addEventListener('pointerdown', listener);
+                btn.addEventListener('mousedown', listener);
+                // 모바일 터치 이벤트 지원
+                btn.addEventListener('touchstart', listener);
             });
             
             choiceInputs.appendChild(playerChoiceContainer);
@@ -302,11 +309,9 @@ document.addEventListener('DOMContentLoaded', () => {
             checkbox.checked = false;
         });
         gamePlay.style.display = 'none';
-        startGameBtn.disabled = true;
     }
 
     // 이벤트 리스너
-    startGameBtn.addEventListener('click', showChoiceInputs);
     submitChoicesBtn.addEventListener('click', saveGameResult);
 
     // 초기 로드
