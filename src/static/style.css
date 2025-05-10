@@ -221,7 +221,7 @@ h3 {
 .inline-choice-buttons {
     display: none;
     gap: 5px;
-    margin-left: auto;
+    margin-left: 10px;
 }
 
 .choice-buttons button,
@@ -249,4 +249,10 @@ h3 {
     .choice-btn {
         width: 100%;
     }
+}
+
+/* Smaller font-size and prevent wrapping for player names */
+.player-checkbox .player-name {
+    font-size: 0.9rem;
+    white-space: nowrap;
 } 

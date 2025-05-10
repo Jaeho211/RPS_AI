@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const submitChoicesBtn = document.getElementById('submitChoices');
     const analysisContent = document.getElementById('analysisContent');
     const historyList = document.getElementById('historyList');
+    const deleteAllBtn = document.getElementById('deleteAllGamesBtn');
 
     let selectedPlayers = new Set();
     let playerChoices = new Map();
@@ -19,7 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
             playerSelection.innerHTML = players.map(player => `
                 <label class="player-checkbox">
                     <input type="checkbox" value="${player.id}" data-name="${player.name}" ${player.name === '이재호' ? 'checked' : ''} />
-                    ${player.name}
+                    <span class="player-name">${player.name}</span>
                     <div class="inline-choice-buttons" style="display:flex; margin-top:10px; gap:5px;">
                         <button class="choice-btn" data-choice="rock">✊</button>
                         <button class="choice-btn" data-choice="paper">✋</button>
@@ -233,6 +234,27 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // 전체 게임 기록 삭제
+    async function deleteAllGames() {
+        if (!confirm('모든 게임 기록을 삭제하시겠습니까?')) {
+            return;
+        }
+        try {
+            const response = await fetch('/games/', {
+                method: 'DELETE'
+            });
+            if (response.ok) {
+                updateHistory();
+                updateAnalysis();
+            } else {
+                alert('전체 게임 기록 삭제에 실패했습니다.');
+            }
+        } catch (error) {
+            console.error('전체 게임 기록 삭제 중 오류가 발생했습니다:', error);
+            alert('전체 게임 기록 삭제 중 오류가 발생했습니다.');
+        }
+    }
+
     // 게임 초기화
     function resetGame() {
         selectedPlayers.clear();
@@ -259,6 +281,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 이벤트 리스너
     submitChoicesBtn.addEventListener('click', saveGameResult);
+    deleteAllBtn.addEventListener('click', deleteAllGames);
 
     // 초기 로드
     loadPlayers();

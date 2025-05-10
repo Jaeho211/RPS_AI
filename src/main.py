@@ -91,7 +91,8 @@ def create_game(game: GameCreate):
 
 @app.get("/games/", response_model=List[GameSchema])
 def get_games(db: Session = Depends(get_db)):
-    games = db.query(Game).all()
+    # Return games ordered by newest first
+    games = db.query(Game).order_by(Game.id.desc()).all()
     # ISO 형식으로 명확하게 변환하여 반환
     return [
         {
@@ -122,6 +123,14 @@ def delete_game(game_id: int, db: Session = Depends(get_db)):
     db.commit()
     
     return {"message": "Game deleted successfully"}
+
+@app.delete("/games/")
+def delete_all_games(db: Session = Depends(get_db)):
+    # Delete all player choices and games
+    db.query(PlayerChoice).delete()
+    db.query(Game).delete()
+    db.commit()
+    return {"message": "All games deleted successfully"}
 
 @app.get("/analysis/", response_model=AnalysisSchema)
 def get_analysis(db: Session = Depends(get_db)):
