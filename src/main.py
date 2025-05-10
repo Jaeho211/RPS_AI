@@ -54,20 +54,46 @@ def create_game(game: GameCreate):
         db.add(db_game)
         db.flush()  # ID를 얻기 위해 flush
         
-        # 플레이어 선택 저장
-        for player_choice in game.player_choices:
-            db_player = db.query(Player).filter(Player.name == player_choice.player_name).first()
+        # Determine winner(s) first
+        submitted_choices = [pc.choice for pc in game.player_choices]
+        unique_choices = list(set(submitted_choices))
+        winning_choice = None
+
+        if len(unique_choices) == 2:
+            if 'rock' in unique_choices and 'scissors' in unique_choices:
+                winning_choice = 'rock'
+            elif 'scissors' in unique_choices and 'paper' in unique_choices:
+                winning_choice = 'scissors'
+            elif 'paper' in unique_choices and 'rock' in unique_choices:
+                winning_choice = 'paper'
+        # If len is 1 or 3, it's a tie, winning_choice remains None
+
+        # Create and save player choices, setting is_winner
+        for player_choice_data in game.player_choices:
+            db_player = db.query(Player).filter(Player.name == player_choice_data.player_name).first()
             if not db_player:
-                db_player = Player(name=player_choice.player_name)
+                # If player does not exist, create them (should ideally not happen with pre-loaded players)
+                db_player = Player(name=player_choice_data.player_name)
                 db.add(db_player)
-                db.flush()
+                # No flush needed here as we don't need player ID immediately for PlayerChoice
+
+            is_winner = (player_choice_data.choice == winning_choice) if winning_choice else False
 
             db_player_choice = PlayerChoice(
                 game_id=db_game.id,
-                player_name=player_choice.player_name,
-                choice=player_choice.choice
+                player_name=player_choice_data.player_name,
+                choice=player_choice_data.choice,
+                is_winner=is_winner
             )
             db.add(db_player_choice)
+
+        # Debugging: Print is_winner status before commit (will now show correct status)
+        print("--- Player Choices is_winner status before commit ---")
+        # Iterate over the PlayerChoice objects added to the session
+        for pc in db.new:
+            if isinstance(pc, PlayerChoice):
+                 print(f"Player: {pc.player_name}, Choice: {pc.choice}, Is Winner: {pc.is_winner}")
+        print("------------------------------------------------------")
 
         db.commit()
         db.refresh(db_game)
@@ -150,7 +176,14 @@ def get_analysis(db: Session = Depends(get_db)):
             PlayerChoice.player_name == player.name,
             PlayerChoice.is_winner == True
         ).count()
-        win_rates[player.name] = (wins / total_games) * 100 if total_games > 0 else 0
+
+        win_rate = (wins / total_games) * 100 if total_games > 0 else 0
+        win_rates[player.name] = win_rate
+
+        # Debugging: Print analysis calculation details
+        print(f"--- Analysis for {player.name} ---")
+        print(f"Wins: {wins}, Total Games: {total_games}, Calculated Win Rate: {win_rate}")
+        print("----------------------------------")
     
     # 선택 패턴 분석
     choice_patterns = {}

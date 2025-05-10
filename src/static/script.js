@@ -109,7 +109,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (response.ok) {
                 const result = await response.json();
                 updateHistory();
-                updateAnalysis();
+                // Fetch and update analysis after saving
+                const analysisResponse = await fetch('/analysis/');
+                if (analysisResponse.ok) {
+                    const analysisData = await analysisResponse.json();
+                    updateAnalysis(analysisData);
+                } else {
+                    console.error('Failed to fetch analysis after saving game.');
+                }
                 resetGame();
             } else {
                 console.error('에러 응답:', await response.text());
@@ -121,16 +128,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 분석 결과 업데이트
-    function updateAnalysis(analysis = { winRates: {}, patterns: {}, predictions: {} }) {
-        if (!analysis) return;
-        const { winRates, patterns, predictions } = analysis;
+    function updateAnalysis(analysis = { win_rates: {}, choice_patterns: {}, predictions: {} }) {
+        // Use snake_case keys from the backend response
+        const { win_rates, choice_patterns, predictions } = analysis;
         
         // 승률 분석
         document.getElementById('winRateAnalysis').innerHTML = `
             <div class="stats">
                 <ul>
-                    ${Object.entries(winRates).map(([player, rate]) => `
-                        <li>${player}: ${(rate * 100).toFixed(1)}%</li>
+                    ${Object.entries(win_rates).map(([player, rate]) => `
+                        <li>${player}: ${rate.toFixed(1)}%</li>
                     `).join('')}
                 </ul>
             </div>
@@ -140,8 +147,8 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('patternAnalysis').innerHTML = `
             <div class="stats">
                 <ul>
-                    ${Object.entries(patterns).map(([player, pattern]) => `
-                        <li>${player}: ${pattern}</li>
+                    ${Object.entries(choice_patterns).map(([player, pattern]) => `
+                        <li>${player}: Rock: ${pattern.rock}, Paper: ${pattern.paper}, Scissors: ${pattern.scissors}</li>
                     `).join('')}
                 </ul>
             </div>
