@@ -36,13 +36,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 선택 상태 변경 시 자동 렌더링
     function updateStartButton() {
+        // 현재 선택된 플레이어 집합 업데이트
         selectedPlayers.clear();
         document.querySelectorAll('.player-checkbox input:checked').forEach(checkbox => {
             selectedPlayers.add({ id: checkbox.value, name: checkbox.dataset.name });
         });
-        // 2명 이상일 때만 렌더
+        
         if (selectedPlayers.size >= 2) {
+            // 두 명 이상 선택 시 입력 UI 표시
             showChoiceInputs();
+        } else {
+            // 선택이 두 명 미만이면 입력 UI 숨김 및 초기화
+            gamePlay.style.display = 'none';
+            choiceInputs.innerHTML = '';
+            playerChoices.clear();
+            submitChoicesBtn.disabled = true;
         }
     }
 
