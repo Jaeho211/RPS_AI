@@ -13,10 +13,6 @@
         <div id="gameArea">
             <div class="section">
                 <h2>게임 기록</h2>
-                <div class="date-input">
-                    <label for="gameDate">게임 날짜:</label>
-                    <input type="date" id="gameDate" value="">
-                </div>
                 <div id="playerSelection" class="player-selection">
                     <!-- 플레이어 선택 체크박스들이 여기에 동적으로 추가됩니다 -->
                 </div>
@@ -58,6 +54,6 @@
         </div>
     </div>
 
-    <script src="{{ url_for('static', path='/script.js') }}"></script>
+    <script src="{{ url_for('static', path='/script.js') }}?v={{ version }}"></script>
 </body>
 </html> 

@@ -3,6 +3,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 import datetime
 import enum
+from datetime import timezone, timedelta
 
 Base = declarative_base()
 
@@ -25,7 +26,8 @@ class Game(Base):
     __tablename__ = "games"
     
     id = Column(Integer, primary_key=True, index=True)
-    created_at = Column(DateTime, default=datetime.datetime.now)
+    game_date = Column(DateTime, default=datetime.datetime.now(timezone(timedelta(hours=9))))
+    created_at = Column(DateTime, default=datetime.datetime.now(timezone(timedelta(hours=9))))
     player_choices = relationship("PlayerChoice", back_populates="game", cascade="all, delete-orphan")
     
     # Relationships
@@ -34,15 +36,9 @@ class Game(Base):
     def to_dict(self):
         return {
             "id": self.id,
-            "created_at": self.created_at,
-            "players": [
-                {
-                    "name": pc.player_name,
-                    "choice": pc.choice,
-                    "is_winner": pc.is_winner
-                }
-                for pc in self.player_choices
-            ]
+            "game_date": self.game_date.isoformat() if self.game_date else None,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "players": [choice.to_dict() for choice in self.player_choices]
         }
 
 class GameResult(Base):
@@ -68,4 +64,11 @@ class PlayerChoice(Base):
     choice = Column(String)  # 'rock', 'paper', 'scissors'
     is_winner = Column(Boolean, default=False)
     
-    game = relationship("Game", back_populates="player_choices") 
+    game = relationship("Game", back_populates="player_choices")
+
+    def to_dict(self):
+        return {
+            "name": self.player_name,
+            "choice": self.choice,
+            "is_winner": self.is_winner
+        } 

@@ -15,10 +15,11 @@ class PlayerChoice(BaseModel):
 
 class GameCreate(BaseModel):
     player_choices: List[PlayerChoice]
-    game_date: datetime = datetime.now()
+    game_date: Optional[str] = None
 
 class Game(BaseModel):
     id: int
+    game_date: datetime
     created_at: datetime
     players: List[dict]
 

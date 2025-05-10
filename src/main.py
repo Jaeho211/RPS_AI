@@ -8,7 +8,8 @@ from typing import List, Optional
 import uvicorn
 import random
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
+import time
 
 from database.database import get_db, engine, SessionLocal
 from database.models import Base, Player, Game, PlayerChoice
@@ -31,84 +32,83 @@ def on_startup():
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+    version = int(time.time())
+    return templates.TemplateResponse("index.html", {"request": request, "version": version})
 
 @app.get("/players/", response_model=List[PlayerSchema])
 def get_players(db: Session = Depends(get_db)):
     return db.query(Player).all()
 
+def get_korean_time():
+    return datetime.now(timezone(timedelta(hours=9)))
+
 @app.post("/games/", response_model=GameSchema)
-def create_game(game: GameCreate, db: Session = Depends(get_db)):
+def create_game(game: GameCreate):
+    db = SessionLocal()
     try:
-        # 게임 생성 (game_date는 이미 기본값으로 설정되어 있음)
-        db_game = Game(created_at=game.game_date)
-        db.add(db_game)
-        db.flush()
+        # 항상 현재 시간 사용 (클라이언트 전송값 무시)
+        game_date = get_korean_time()
+        print(f"사용된 시간: {game_date}")
         
-        print(f"Created game with ID: {db_game.id} at {game.game_date}")
+        db_game = Game(game_date=game_date)
+        db.add(db_game)
+        db.flush()  # ID를 얻기 위해 flush
         
         # 플레이어 선택 저장
-        choices = {}
         for player_choice in game.player_choices:
-            choices[player_choice.player_name] = player_choice.choice
+            db_player = db.query(Player).filter(Player.name == player_choice.player_name).first()
+            if not db_player:
+                db_player = Player(name=player_choice.player_name)
+                db.add(db_player)
+                db.flush()
+
             db_player_choice = PlayerChoice(
                 game_id=db_game.id,
                 player_name=player_choice.player_name,
-                choice=player_choice.choice,
-                is_winner=False  # 초기값 설정
+                choice=player_choice.choice
             )
             db.add(db_player_choice)
-            print(f"Added choice for {player_choice.player_name}: {player_choice.choice}")
-        
-        # 승자 결정
-        winners = determine_winners(choices)
-        print(f"Winners: {winners}")
-        
-        # 승자 표시 업데이트
-        for player_choice in db_game.player_choices:
-            if player_choice.player_name in winners:
-                player_choice.is_winner = True
-                print(f"Marked {player_choice.player_name} as winner")
-        
+
         db.commit()
         db.refresh(db_game)
         
-        # 결과 확인
-        result = db_game.to_dict()
-        print(f"Final game result: {result}")
-        
-        return result
-    except Exception as e:
-        print(f"Error creating game: {str(e)}")
-        db.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
-
-def determine_winners(choices):
-    if len(set(choices.values())) == 1:
-        return list(choices.keys())  # 모두 같은 선택이면 무승부
-    
-    if len(set(choices.values())) == 2:
-        # 두 가지 선택만 있는 경우
-        choice1, choice2 = set(choices.values())
-        if (choice1 == "rock" and choice2 == "scissors") or \
-           (choice1 == "scissors" and choice2 == "paper") or \
-           (choice1 == "paper" and choice2 == "rock"):
-            winner_choice = choice1
-        else:
-            winner_choice = choice2
-        
-        return [name for name, choice in choices.items() if choice == winner_choice]
-    
-    # 세 가지 선택이 모두 있는 경우
-    if "rock" in choices.values() and "paper" in choices.values() and "scissors" in choices.values():
-        return [name for name, choice in choices.items() if choice == "paper"]
-    
-    return []
+        # 응답을 위한 딕셔너리 생성
+        return {
+            "id": db_game.id,
+            "game_date": game_date.isoformat(),
+            "created_at": db_game.created_at.isoformat() if db_game.created_at else None,
+            "players": [
+                {
+                    "name": choice.player_name,
+                    "choice": choice.choice,
+                    "is_winner": choice.is_winner
+                }
+                for choice in db_game.player_choices
+            ]
+        }
+    finally:
+        db.close()
 
 @app.get("/games/", response_model=List[GameSchema])
 def get_games(db: Session = Depends(get_db)):
     games = db.query(Game).all()
-    return [game.to_dict() for game in games]
+    # ISO 형식으로 명확하게 변환하여 반환
+    return [
+        {
+            "id": game.id,
+            "game_date": game.game_date.isoformat() if game.game_date else None,
+            "created_at": game.created_at.isoformat() if game.created_at else None,
+            "players": [
+                {
+                    "name": choice.player_name, 
+                    "choice": choice.choice,
+                    "is_winner": choice.is_winner
+                }
+                for choice in game.player_choices
+            ]
+        }
+        for game in games
+    ]
 
 @app.delete("/games/{game_id}")
 def delete_game(game_id: int, db: Session = Depends(get_db)):

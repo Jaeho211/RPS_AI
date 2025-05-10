@@ -46,23 +46,85 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 선택 입력 UI 생성
     function showChoiceInputs() {
-        choiceInputs.innerHTML = Array.from(selectedPlayers).map(player => `
-            <div class="player-choice">
+        // 이전 입력란 초기화
+        choiceInputs.innerHTML = '';
+        
+        // 날짜 시간 입력란 추가 (더 눈에 띄게 스타일링)
+        const dateInputContainer = document.createElement('div');
+        dateInputContainer.className = 'date-input-container';
+        dateInputContainer.style.padding = '15px';
+        dateInputContainer.style.margin = '0 0 20px 0';
+        dateInputContainer.style.backgroundColor = '#f5f5f5';
+        dateInputContainer.style.borderRadius = '5px';
+        dateInputContainer.style.border = '1px solid #ddd';
+        
+        // 제목과 설명 추가
+        const dateTitle = document.createElement('h3');
+        dateTitle.textContent = '게임 일시';
+        dateTitle.style.marginBottom = '10px';
+        dateInputContainer.appendChild(dateTitle);
+        
+        const dateDescription = document.createElement('p');
+        dateDescription.textContent = '현재 시간이 자동으로 설정됩니다. 이 시간은 게임 저장 시에 사용됩니다.';
+        dateDescription.style.fontSize = '0.9em';
+        dateDescription.style.marginBottom = '10px';
+        dateInputContainer.appendChild(dateDescription);
+        
+        // 현재 시간 표시 (읽기 전용)
+        const timeDisplay = document.createElement('div');
+        timeDisplay.id = 'currentTimeDisplay';
+        timeDisplay.style.fontSize = '1.2em';
+        timeDisplay.style.fontWeight = 'bold';
+        timeDisplay.style.padding = '10px';
+        timeDisplay.style.backgroundColor = '#e9e9e9';
+        timeDisplay.style.borderRadius = '3px';
+        timeDisplay.style.textAlign = 'center';
+        
+        // 현재 시간 설정 및 업데이트
+        function updateCurrentTime() {
+            const now = new Date();
+            timeDisplay.textContent = now.toLocaleString('ko-KR', {
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+        }
+        
+        updateCurrentTime();
+        // 1초마다 시간 업데이트
+        const timeInterval = setInterval(updateCurrentTime, 1000);
+        
+        // 페이지 언로드 시 인터벌 정리
+        window.addEventListener('beforeunload', () => {
+            clearInterval(timeInterval);
+        });
+        
+        dateInputContainer.appendChild(timeDisplay);
+        choiceInputs.appendChild(dateInputContainer);
+        
+        // 플레이어 선택 UI 추가
+        Array.from(selectedPlayers).forEach(player => {
+            const playerChoiceContainer = document.createElement('div');
+            playerChoiceContainer.className = 'player-choice';
+            playerChoiceContainer.innerHTML = `
                 <h3>${player.name}</h3>
                 <div class="choice-buttons">
                     <button class="choice-btn" data-choice="rock">✊</button>
                     <button class="choice-btn" data-choice="paper">✋</button>
                     <button class="choice-btn" data-choice="scissors">✌️</button>
                 </div>
-            </div>
-        `).join('');
-
-        // 선택 버튼 이벤트 리스너 추가
-        document.querySelectorAll('.player-choice').forEach(choiceDiv => {
-            const playerName = choiceDiv.querySelector('h3').textContent;
-            choiceDiv.querySelectorAll('.choice-btn').forEach(btn => {
+            `;
+            
+            // 선택 버튼 이벤트 리스너 추가
+            const playerName = player.name;
+            playerChoiceContainer.querySelectorAll('.choice-btn').forEach(btn => {
                 btn.addEventListener('click', () => handleChoice(playerName, btn));
             });
+            
+            choiceInputs.appendChild(playerChoiceContainer);
         });
 
         gamePlay.style.display = 'block';
@@ -86,14 +148,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 게임 결과 저장
     async function saveGameResult() {
-        const dateInput = document.getElementById('gameDate');
         const gameData = {
             player_choices: Array.from(selectedPlayers).map(player => ({
                 player_name: player.name,
                 choice: playerChoices.get(player.name)
-            })),
-            game_date: dateInput ? dateInput.value : undefined
+            }))
         };
+        
+        console.log('전송 데이터:', gameData);
 
         try {
             const response = await fetch('/games/', {
@@ -106,9 +168,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (response.ok) {
                 const result = await response.json();
-                updateAnalysis(result.analysis);
-                updateHistory(result.history);
+                updateHistory();
+                updateAnalysis();
                 resetGame();
+            } else {
+                console.error('에러 응답:', await response.text());
+                alert('게임 결과 저장에 실패했습니다.');
             }
         } catch (error) {
             console.error('게임 결과 저장 실패:', error);
@@ -162,23 +227,27 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const response = await fetch('/games/');
             const games = await response.json();
-            
+
             games.forEach(game => {
                 const li = document.createElement('li');
                 li.className = 'history-item';
-                
-                const gameDate = new Date(game.created_at).toLocaleDateString('ko-KR', {
+
+                // 정확한 시간 표시 (초 단위 포함)
+                const gameDate = game.game_date || game.created_at;
+                const parsedDate = new Date(gameDate);
+                const formattedDate = parsedDate.toLocaleString('ko-KR', {
                     year: 'numeric',
                     month: 'long',
                     day: 'numeric',
                     hour: '2-digit',
-                    minute: '2-digit'
+                    minute: '2-digit',
+                    second: '2-digit'
                 });
-                
+
                 const gameInfo = document.createElement('div');
                 gameInfo.className = 'game-info';
                 gameInfo.innerHTML = `
-                    <div class="game-date">${gameDate}</div>
+                    <div class="game-date">${formattedDate}</div>
                     <div class="game-players">
                         ${game.players.map(player => `
                             <div class="player-result ${player.is_winner ? 'winner' : 'loser'}">
@@ -187,12 +256,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         `).join('')}
                     </div>
                 `;
-                
+
                 const deleteBtn = document.createElement('button');
                 deleteBtn.className = 'delete-btn';
                 deleteBtn.textContent = '삭제';
                 deleteBtn.onclick = () => deleteGame(game.id);
-                
+
                 li.appendChild(gameInfo);
                 li.appendChild(deleteBtn);
                 historyList.appendChild(li);
@@ -244,11 +313,4 @@ document.addEventListener('DOMContentLoaded', () => {
     loadPlayers();
     updateHistory();
     updateAnalysis();
-
-    // 오늘 날짜를 기본값으로 설정 (id가 'gameDate'인 input에만 적용)
-    const dateInput = document.getElementById('gameDate');
-    if (dateInput) {
-        const today = new Date().toISOString().split('T')[0];
-        dateInput.value = today;
-    }
 }); 
