@@ -16,9 +16,9 @@ body {
 }
 
 .container {
-    max-width: 1000px;
+    max-width: 600px;
     margin: 0 auto;
-    padding: 20px;
+    padding: 10px;
     background-color: white;
     border-radius: var(--border-radius);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -27,7 +27,8 @@ body {
 h1 {
     text-align: center;
     color: var(--primary-color);
-    margin-bottom: 30px;
+    font-size: 2rem;
+    margin-bottom: 1rem;
 }
 
 h2 {
@@ -42,8 +43,8 @@ h3 {
 }
 
 .section {
-    margin-bottom: 30px;
-    padding: 20px;
+    margin-bottom: 20px;
+    padding: 15px;
     background-color: white;
     border-radius: var(--border-radius);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -51,16 +52,18 @@ h3 {
 
 .player-selection {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    grid-template-columns: 1fr;
     gap: 10px;
     margin-bottom: 20px;
 }
 
 .player-checkbox {
     display: flex;
+    flex-direction: row;
     align-items: center;
-    padding: 10px;
-    background-color: #f8f9fa;
+    padding: 8px;
+    background-color: #ffffff;
+    border: 1px solid var(--border-color);
     border-radius: var(--border-radius);
     cursor: pointer;
 }
@@ -214,14 +217,29 @@ h3 {
     font-size: 1rem;
 }
 
+/* Inline choice buttons styling */
+.inline-choice-buttons {
+    display: none;
+    gap: 5px;
+    margin-left: auto;
+}
+
+.choice-buttons button,
+.inline-choice-buttons button {
+    margin-right: 4px;
+}
+
 @media (max-width: 600px) {
     .container {
         padding: 10px;
     }
     
-    .player-selection,
-    .choice-inputs {
+    .player-selection {
         grid-template-columns: 1fr;
+    }
+    .choice-inputs {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 8px;
     }
     
     .choice-buttons {

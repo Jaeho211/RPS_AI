@@ -4,4 +4,4 @@
 python3 -c "from database.models import Base; from database.database import engine; Base.metadata.create_all(bind=engine)"
 
 # 서버 시작
-uvicorn main:app --reload 
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
