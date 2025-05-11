@@ -16,9 +16,6 @@ from database.models import Base, Player, Game, PlayerChoice
 from schemas import GameCreate, Game as GameSchema, PlayerChoice as PlayerChoiceSchema, Player as PlayerSchema, Analysis as AnalysisSchema
 from database.init_data import init_team_members
 
-# 데이터베이스 테이블 생성
-Base.metadata.create_all(bind=engine)
-
 app = FastAPI()
 
 # 정적 파일과 템플릿 설정
@@ -27,7 +24,6 @@ templates = Jinja2Templates(directory="templates")
 
 @app.on_event("startup")
 def on_startup():
-    Base.metadata.create_all(bind=engine)
     init_team_members()
 
 @app.get("/", response_class=HTMLResponse)
