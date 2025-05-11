@@ -1,7 +1,8 @@
 services:
-  - type: free
+  - type: web
     name: rps-ai
     env: python
+    instanceType: free
     buildCommand: pip install -r requirements.txt
     startCommand: cd src && gunicorn main:app -w 4 -k uvicorn.workers.UvicornWorker -b 0.0.0.0:$PORT
     envVars:
