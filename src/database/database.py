@@ -5,6 +5,7 @@ import os
 
 # 환경 변수에서 데이터베이스 URL을 가져오거나, 없으면 SQLite를 사용
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./rps_game.db")
+print(f"DATABASE_URL loaded: {DATABASE_URL}")
 
 # Render의 PostgreSQL URL 형식 수정
 if DATABASE_URL.startswith("postgres://"):
