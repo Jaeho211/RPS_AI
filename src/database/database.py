@@ -4,8 +4,7 @@ from sqlalchemy.ext.declarative import declarative_base
 import os
 
 # 환경 변수에서 데이터베이스 URL을 가져오거나, 없으면 SQLite를 사용
-# DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./rps_game.db")
-DATABASE_URL = "postgresql://postgres.ivzftnbuysigksgamptg:jJJfPs9!JcN8tU_@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres"
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./rps_game.db")
 
 # Render의 PostgreSQL URL 형식 수정
 if DATABASE_URL.startswith("postgres://"):
