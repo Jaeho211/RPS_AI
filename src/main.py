@@ -4,10 +4,8 @@ from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
 from fastapi.requests import Request
 from sqlalchemy.orm import Session
-from typing import List, Optional
+from typing import List
 import uvicorn
-import random
-from pydantic import BaseModel
 from datetime import datetime, timezone, timedelta
 import time
 
@@ -164,7 +162,7 @@ def get_analysis(db: Session = Depends(get_db)):
             choice_patterns={},
             predictions={}
         )
-    
+
     # 각 플레이어의 승률 계산
     win_rates = {}
     for player in db.query(Player).all():
@@ -172,13 +170,16 @@ def get_analysis(db: Session = Depends(get_db)):
             PlayerChoice.player_name == player.name,
             PlayerChoice.is_winner == True
         ).count()
+        games_played = db.query(PlayerChoice).filter(
+            PlayerChoice.player_name == player.name
+        ).count()
 
-        win_rate = (wins / total_games) * 100 if total_games > 0 else 0
+        win_rate = (wins / games_played) * 100 if games_played > 0 else 0
         win_rates[player.name] = win_rate
 
         # Debugging: Print analysis calculation details
         print(f"--- Analysis for {player.name} ---")
-        print(f"Wins: {wins}, Total Games: {total_games}, Calculated Win Rate: {win_rate}")
+        print(f"Wins: {wins}, Games Played: {games_played}, Calculated Win Rate: {win_rate}")
         print("----------------------------------")
     
     # 선택 패턴 분석
