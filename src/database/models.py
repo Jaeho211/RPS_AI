@@ -26,8 +26,15 @@ class Game(Base):
     __tablename__ = "games"
     
     id = Column(Integer, primary_key=True, index=True)
-    game_date = Column(DateTime, default=datetime.datetime.now(timezone(timedelta(hours=9))))
-    created_at = Column(DateTime, default=datetime.datetime.now(timezone(timedelta(hours=9))))
+    # Use callables so the timestamp is evaluated at row creation time
+    game_date = Column(
+        DateTime,
+        default=lambda: datetime.datetime.now(timezone(timedelta(hours=9)))
+    )
+    created_at = Column(
+        DateTime,
+        default=lambda: datetime.datetime.now(timezone(timedelta(hours=9)))
+    )
     player_choices = relationship("PlayerChoice", back_populates="game", cascade="all, delete-orphan")
     
     # Relationships
