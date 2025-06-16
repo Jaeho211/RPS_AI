@@ -1,18 +1,23 @@
-from fastapi import FastAPI, Depends, HTTPException
+import time
+from datetime import datetime, timedelta, timezone
+from typing import List
+
+import uvicorn
+from fastapi import Depends, FastAPI, HTTPException
+from fastapi.requests import Request
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse
-from fastapi.requests import Request
 from sqlalchemy.orm import Session
-from typing import List
-import uvicorn
-from datetime import datetime, timezone, timedelta
-import time
 
-from database.database import get_db, engine, SessionLocal
-from database.models import Base, Player, Game, PlayerChoice
-from schemas import GameCreate, Game as GameSchema, PlayerChoice as PlayerChoiceSchema, Player as PlayerSchema, Analysis as AnalysisSchema
+from database.database import SessionLocal, engine, get_db
 from database.init_data import init_team_members
+from database.models import Base, Game, Player, PlayerChoice
+from schemas import Analysis as AnalysisSchema
+from schemas import Game as GameSchema
+from schemas import GameCreate
+from schemas import Player as PlayerSchema
+from schemas import PlayerChoice as PlayerChoiceSchema
 
 app = FastAPI()
 
@@ -22,6 +27,7 @@ templates = Jinja2Templates(directory="templates")
 
 @app.on_event("startup")
 def on_startup():
+    Base.metadata.create_all(bind=engine)
     init_team_members()
 
 @app.get("/", response_class=HTMLResponse)
